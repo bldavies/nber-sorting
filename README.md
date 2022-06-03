@@ -1,6 +1,6 @@
 # nber-sorting
 
-This repository contains replication code for "[Sex-based sorting among economists: Evidence from the NBER](https://doi.org/10.31235/osf.io/zeb7a)."
+This repository contains replication code for "[Gender sorting among economists: Evidence from the NBER](https://doi.org/10.1016/j.econlet.2022.110640)."
 
 ## Workflow
 

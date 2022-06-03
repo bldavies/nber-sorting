@@ -3,7 +3,7 @@
 # This script generates figures and tables presented in the paper.
 #
 # Ben Davies
-# January 2022
+# March 2022
 
 
 # Initialization ----
@@ -43,12 +43,48 @@ programs = nberwp::programs %>%
 
 source('code/program-counts.R')
 
-source('code/sex-sources.R')
+source('code/gender-sources.R')
 
 source('code/female-shares.R')
 
+# Define function for computing bootstrap confidence interval around mean
+get_bootstrap_ci = function(x, n_reps = 2e2, coverage = 0.95, seed = NULL) {
+  if (is.null(seed)) set.seed(0)
+  x = x[!is.na(x)]
+  boot = sapply(1:n_reps, function(i) {
+    mean(sample(x, length(x), replace = T))
+  })
+  tibble::tibble(
+    ci_lower = as.numeric(quantile(boot, (1 - coverage) / 2)),
+    ci_upper = as.numeric(quantile(boot, (1 + coverage) / 2))
+  )
+}
+
+# Count team members by gender
+teams = paper_authors %>%
+  left_join(authors) %>%
+  mutate(female = ifelse(female < 0, NA, female)) %>%
+  count(paper, female) %>%
+  mutate(female = case_when(female == 0 ~ 'men',
+                            female == 1 ~ 'women',
+                            T ~ 'unknown')) %>%
+  spread(female, n, fill = 0) %>%
+  mutate(total = men + women + unknown) %>%
+  left_join(papers)
+
 source('code/team-sizes.R')
 
+# Identify team types
+team_types = teams %>%
+  mutate(type = case_when(unknown > 0 ~ 'Unknown',
+                          men == 0 ~ 'All female',
+                          women == 0 ~ 'All male',
+                          T ~ 'Mixed')) %>%
+  select(year, paper, outlet, type)
+
+source('code/team-type-shares.R')
+
+source('code/team-type-journal-rates.R')
 
 # Network construction ----
 
@@ -118,14 +154,14 @@ for (i in seq_along(nets)) {
 
 source('code/node-trends.R')
 
-# Identify sets of males and females
-males = filter(authors, female == 0)$author
-females = filter(authors, female == 1)$author
+# Identify sets of men and women
+men = filter(authors, female == 0)$author
+women = filter(authors, female == 1)$author
 
-# Identify subnetworks of males, females, and authors with known sexes
-known_nets = map(nets, ~induced_subgraph(., V(.)$name %in% c(males, females)))
-male_nets = map(known_nets, ~induced_subgraph(., V(.)$name %in% males))
-female_nets = map(known_nets, ~induced_subgraph(., V(.)$name %in% females))
+# Identify subnetworks of men, women, and authors with known genders
+known_nets = map(nets, ~induced_subgraph(., V(.)$name %in% c(men, women)))
+male_nets = map(known_nets, ~induced_subgraph(., V(.)$name %in% men))
+female_nets = map(known_nets, ~induced_subgraph(., V(.)$name %in% women))
 
 # Construct subfield networks
 subfield_nets = programs %>%
@@ -137,12 +173,12 @@ subfield_nets = programs %>%
          node_set = map(npa, ~unique(.$author)),
          net = map2(edge_set, node_set, ~graph_from_data_frame(..1, directed = F, ..2)),
          net = map(net, function(G) {
-           V(G)$female = V(G)$name %in% females
+           V(G)$female = V(G)$name %in% women
            G
          }),
-         known_net = map(net, ~induced_subgraph(., V(.)$name %in% c(males, females))),
-         male_net = map(known_net, ~induced_subgraph(., V(.)$name %in% males)),
-         female_net = map(known_net, ~induced_subgraph(., V(.)$name %in% females)))
+         known_net = map(net, ~induced_subgraph(., V(.)$name %in% c(men, women))),
+         male_net = map(known_net, ~induced_subgraph(., V(.)$name %in% men)),
+         female_net = map(known_net, ~induced_subgraph(., V(.)$name %in% women)))
 
 source('code/assortativity-coefficients.R')
 

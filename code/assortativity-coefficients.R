@@ -4,14 +4,14 @@
 # and its subfield subnetworks.
 #
 # Ben Davies
-# January 2022
+# March 2022
 
 # Define function for computing assortativity coefficient, and confidence
-# interval under sex- and degree-preserving randomization
+# interval under gender- and degree-preserving randomization
 get_assortativity = function(G, boot_reps = 200, alpha = 0.05, seed = NULL) {
   if (is.null(seed)) seed = 0
   set.seed(seed)
-  f = V(G)$name %in% females
+  f = V(G)$name %in% women
   d = degree(G)
   boot = sapply(1:boot_reps, function(i) {
     assortativity(sample_degseq(d), f)
@@ -43,6 +43,7 @@ assortativity_coefficients %>%
   facet_wrap(~paste(Subfield, 'papers')) +
   labs(y = 'Assortativity coefficient')
 ggsave('figures/assortativity-coefficients.pdf', width = 6, height = 3)
+ggsave('figures/assortativity-coefficients.jpeg', width = 6, height = 3, dpi = 400)
 
 # Save plotted data
 assortativity_coefficients %>%
